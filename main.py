@@ -64,20 +64,35 @@ def check_neighbors(y, x, likelies):
         if x > 0:
             neighbors.append([board[y - 1][x - 1], board[y][x - 1], board[y + 1][x - 1]])
             neighbors.append([board[y - 1][x], 99, board[y + 1][x]])
+        elif x == 0:
+            neighbors.append([99, 99, 99])
+            neighbors.append([board[y - 1][x], 99, board[y + 1][x]])
         if x < GRID_WIDTH - 1:
             neighbors.append([board[y - 1][x + 1], board[y][x + 1], board[y + 1][x + 1]])
+        elif x == GRID_WIDTH - 1:
+            neighbors.append([99, 99, 99])
     elif y == 0:
         if x > 0:
             neighbors.append([99, board[y][x - 1], board[y + 1][x - 1]])
             neighbors.append([99, 99, board[y + 1][x]])
+        elif x == 0:
+            neighbors.append([99, 99, 99])
+            neighbors.append([99, 99, board[y + 1][x]])
         if x < GRID_WIDTH - 1:
             neighbors.append([99, board[y][x + 1], board[y + 1][x + 1]])
-    elif y >= GRID_HEIGHT - 1:
+        elif x == GRID_WIDTH - 1:
+            neighbors.append([99, 99, 99])
+    elif y == GRID_HEIGHT - 1:
         if x > 0:
             neighbors.append([board[y - 1][x - 1], board[y][x - 1], 99])
             neighbors.append([99, board[y - 1][x], 99])
+        elif x == 0:
+            neighbors.append([99, 99, 99])
+            neighbors.append([99, board[y - 1][x], 99])
         if x < GRID_WIDTH - 1:
             neighbors.append([board[y - 1][x + 1], board[y][x + 1], 99])
+        elif x == GRID_WIDTH - 1:
+            neighbors.append([99, 99, 99])
 
     zero_count = 0
     flag_count = 0
@@ -96,6 +111,14 @@ def check_neighbors(y, x, likelies):
     if zero_count + flag_count == value:
         for zero in zero_loc:
             board[y + zero[1] - 1][x + zero[0] - 1] = 9
+            """
+            zero_x = (x + zero[0] - 1) * 25 + 985
+            zero_y = (y + zero[1] - 1) * 25 + 525
+            if not out_of_grid(zero_x, zero_y):
+                pyautogui.moveTo(zero_x, zero_y)
+                sleep(0.005)
+                pyautogui.click(button="right")
+            """
             output += 1
         completed_tiles.append([y, x])
     elif flag_count == value:
@@ -103,7 +126,9 @@ def check_neighbors(y, x, likelies):
             x = (x + zero[0] - 1) * 25 + 985
             y = (y + zero[1] - 1) * 25 + 525
             if not out_of_grid(x, y):
-                click_list.append([x, y])
+                pyautogui.moveTo(x, y)
+                sleep(0.005)
+                pyautogui.click(button='left')
             output += 1
     elif likelies and len(zero_loc) > 0:
         zero = random.choice(zero_loc)
@@ -135,12 +160,6 @@ def process_board(guess):
             outputs.append(check_neighbors(i, j, likelies))
 
 
-def make_clicks():
-    for click in click_list:
-        pyautogui.moveTo(click[0], click[1])
-        pyautogui.click(button='left')
-
-
 # Main
 
 # Board setup
@@ -151,6 +170,7 @@ board = np.array([board for i in range(GRID_HEIGHT)])
 
 # Loop
 run = True
+guess_count = 0
 while run:
     img = ImageGrab.grab(bbox=(980, 520, 1580, 1020))
     np_img = np.array(img)
@@ -161,9 +181,12 @@ while run:
     for value in outputs:
         sum += value
     if sum == 0:
-        guess = True
-        print("Making a guess...")
-        process_board(guess)
+        guess_count += 1
+        if guess_count > 3:
+            guess_count = 0
+            guess = True
+            print("Making a guess...")
+            process_board(guess)
     if guess:
         sorted_list = sorted(likelies_list, key=itemgetter(0), reverse=True)
         pick = sorted_list[0]
@@ -171,8 +194,9 @@ while run:
         pyautogui.click()
         likelies_list = []
         guess = False
-    else:
-        make_clicks()
+        img = ImageGrab.grab(bbox=(980, 520, 1580, 1020))
+        np_img = np.array(img)
+        update_board(np_img)
     try:
         if keyboard.is_pressed('q'):
             run = False
